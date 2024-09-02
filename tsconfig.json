@@ -1,0 +1,34 @@
+{
+   "compilerOptions": {
+      "strictPropertyInitialization": false,
+      "lib": [
+         "es5",
+         "es6"
+      ],
+      "moduleResolution": "node",
+      "emitDecoratorMetadata": true,
+      "experimentalDecorators": true,
+      "sourceMap": true,
+      // "target": "es5",
+      "target": "ES2020",
+      "module": "CommonJS",
+      "strict": true,
+      "esModuleInterop": true,
+      "skipLibCheck": true,
+      "forceConsistentCasingInFileNames": true,
+      // "outDir": "./build",
+      "outDir": "./dist",
+      "rootDir": "./src"
+   },
+   "include": [
+      "src/**/*.ts",
+      // "src/types/express.d.ts"
+   ],
+   "exclude": [
+      "node_modules",
+      "dist"
+   ],
+   "files": [
+      "src/types/express.d.ts"
+   ]
+}

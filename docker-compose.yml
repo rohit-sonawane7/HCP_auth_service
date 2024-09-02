@@ -1,0 +1,30 @@
+version: '3'
+services:
+
+  mongodb:
+    image: "mongo:5.0.12"
+    container_name: "typeorm-mongodb"
+    ports:
+      - "27017:27017"
+
+
+
+# version: '3.8'
+# 
+# services:
+  # auth-service:
+    # build: .
+    # ports:
+      # - "5000:5000"
+    # environment:
+      # - NODE_ENV=development
+      # - JWT_SECRET=your_jwt_secret_key
+      # - MONGO_URI=mongodb://mongo:27017/auth
+    # depends_on:
+      # - mongo
+# 
+  # mongo:
+    # image: mongo:4.2
+    # ports:
+      # - "27017:27017"
+# 
