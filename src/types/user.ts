@@ -10,3 +10,14 @@ export interface RegisterRequest {
     password: string;
     roles?: UserRole;
 }
+
+export interface LoginResponse {
+    id: number;
+    name: string;
+    token: UserToken;
+}
+
+export interface UserToken {
+    accessToken?: string;
+    refreshToken: string;
+}
