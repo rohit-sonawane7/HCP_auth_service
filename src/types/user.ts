@@ -21,3 +21,9 @@ export interface UserToken {
     accessToken?: string;
     refreshToken: string;
 }
+
+
+export interface EmailResponse {
+    message: string;
+    otp: number
+}

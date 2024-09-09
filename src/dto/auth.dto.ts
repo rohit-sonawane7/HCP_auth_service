@@ -2,9 +2,12 @@ import { IsString, IsEmail, IsOptional, MinLength, IsArray } from 'class-validat
 import { UserRole } from '../types/user';
 
 export class RegisterDto {
+
     @IsString()
-    @MinLength(3)
-    username: string;
+    first_name: string;
+
+    @IsString()
+    last_name: string;
 
     @IsEmail()
     email: string;

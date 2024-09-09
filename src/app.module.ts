@@ -1,26 +1,25 @@
+import 'dotenv/config';
 import { Module } from '@nestjs/common';
+import { BullQueueModule } from './bullmq.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth.module';
 import { User } from './entity/User';
-import * as dotenv from 'dotenv';
-
-dotenv.config();
-
-console.log("MONGO_URI");
-console.log(process.env.MONGO_URI);
+import { Otp } from './entity/Otp';
 
 @Module({
     imports: [
         TypeOrmModule.forRoot({
             type: 'mongodb',
             url: process.env.MONGO_URI,
-            synchronize: false,
+            synchronize: true,
             useUnifiedTopology: true,
-            entities: [User],
+            entities: [User, Otp],
             migrations: ['src/migration'],
         }),
-        TypeOrmModule.forFeature([User]),
+        TypeOrmModule.forFeature([User, Otp]),
         AuthModule,
+        BullQueueModule,
     ],
 })
+
 export class AppModule { }

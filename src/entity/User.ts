@@ -6,8 +6,11 @@ export class User {
     @ObjectIdColumn()
     id: number;
 
-    @Column({ unique: true })
-    username: string;
+    @Column()
+    first_name: string;
+
+    @Column()
+    last_name: string;
 
     @Column({ unique: true })
     email: string;
@@ -22,7 +25,10 @@ export class User {
     })
     roles: UserRole;
 
-    @CreateDateColumn({default: new Date()})
+    @Column()
+    emailVerified: boolean;
+
+    @CreateDateColumn({ default: new Date() })
     createdAt: Date;
 
     @UpdateDateColumn()

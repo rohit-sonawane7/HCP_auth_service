@@ -8,37 +8,56 @@ import {
     InternalServerErrorException,
     HttpException,
 } from '@nestjs/common';
-import { User } from '../entity/User';
-import { JwtService } from '@nestjs/jwt';
+import { HttpService } from '@nestjs/axios';
 import { InjectRepository } from '@nestjs/typeorm';
+import { JwtService } from '@nestjs/jwt';
+import { User } from '../entity/User';
+import { Otp } from '../entity/Otp';
 import { RegisterDto, LoginDto } from '../dto/auth.dto';
-import { UserRole, UserToken } from '../types/user';
+import { EmailResponse, UserRole, UserToken } from '../types/user';
 import { LoggerService } from '../logger/logger';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
+import { ValidateOtpDto } from '../dto/validate_otp.dto';
+import { BullQueueService } from './bullmq.service';
 
 @Injectable()
 export class AuthService {
     constructor(
         @InjectRepository(User)
         private readonly userRepository: Repository<User>,
+        @InjectRepository(Otp)
+        private readonly otpRepository: Repository<Otp>,
         private readonly logger: LoggerService,
         private readonly jwtService: JwtService,
+        private readonly httpService: HttpService,
+        private readonly bullQueueService: BullQueueService
     ) { }
 
-    async register(registerDto: RegisterDto): Promise<void> {
+    async register(registerDto: RegisterDto): Promise<{ message: string }> {
         try {
-            const { username, email, password, roles } = registerDto;
+            const { first_name, last_name, email, password } = registerDto;
             const existingUser = await this.userRepository.findOneBy({ email });
             if (existingUser) {
                 throw new HttpException('User already exists', 400);
             }
             const newUser = new User();
-            newUser.username = username;
+            newUser.first_name = first_name;
+            newUser.last_name = last_name;
             newUser.email = email;
             newUser.password = await bcrypt.hash(password, 10);
-            newUser.roles = roles || UserRole.USER;
+            newUser.roles = UserRole.USER;
             newUser.createdAt = new Date();
             await this.userRepository.save(newUser);
+            const mailResponse = await this.sendNotification(email);
+            const newOtp = new Otp();
+            newOtp.email = email;
+            newOtp.otp = mailResponse.otp;
+            await this.otpRepository.save(newOtp);
+            await this.bullQueueService.addTask(
+                {
+                    email,
+                }, 60000);
+            return { message: "user register successfully" };
         }
         catch (error) {
             console.error('Error while Registering User:', error);
@@ -66,7 +85,7 @@ export class AuthService {
             const response = {
                 id: user.id,
                 token,
-                name: user.username
+                name: `${user.first_name} ${user.last_name}`
             }
 
             return response;
@@ -144,6 +163,32 @@ export class AuthService {
             return this.jwtService.verify(token);
         } catch (error) {
             throw new UnauthorizedException('Invalid or expired token');
+        }
+    }
+
+    async sendNotification(email: string): Promise<EmailResponse> {
+        try {
+            return this.httpService.post(`${process.env.NOTIFICATION_URL}/email/send-otp`, { email }).toPromise() as unknown as EmailResponse;
+        } catch (error) {
+            throw new Error('Failed to send notification');
+        }
+    }
+
+    async verifyOtp(validateOtpDto: ValidateOtpDto): Promise<boolean> {
+        try {
+            const { email, otp } = validateOtpDto;
+            const existingUser = await this.userRepository.findOneBy({ email });
+            if (!existingUser) {
+                throw new HttpException('user is not registered', 400);
+            }
+            const savedOtp = await this.otpRepository.findOneBy({ email });
+            if (!savedOtp) return false;
+            if (savedOtp.otp === otp && new Date() > savedOtp.expiry_date) {
+                await this.userRepository.update({ email }, { emailVerified: true });
+                return true;
+            } else return false;
+        } catch (error) {
+            throw new Error('Failed to validate otp');
         }
     }
 }
