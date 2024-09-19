@@ -13,7 +13,6 @@ export interface RegisterRequest {
 
 export interface LoginResponse {
     id: number;
-    name: string;
     token: UserToken;
 }
 

@@ -11,9 +11,8 @@ export class BullQueueService {
         this.processTasks();
     }
 
-    async addTask(data: any, delay: number) {
-        console.log("addTask");
-        await this.taskQueue.add('process-task', data, { delay });
+    async addTask(job_name: string, data: any, delay: number) {
+        await this.taskQueue.add(job_name, data, { delay });
     }
 
     private processTasks() {

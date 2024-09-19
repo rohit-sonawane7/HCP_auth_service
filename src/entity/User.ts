@@ -1,16 +1,10 @@
-import { Entity, Column, CreateDateColumn, UpdateDateColumn, ObjectIdColumn } from 'typeorm';
+import { Entity, Column, CreateDateColumn, UpdateDateColumn, PrimaryGeneratedColumn } from 'typeorm';
 import { UserRole } from '../types/user';
 
 @Entity('users')
 export class User {
-    @ObjectIdColumn()
+    @PrimaryGeneratedColumn('uuid')
     id: number;
-
-    @Column()
-    first_name: string;
-
-    @Column()
-    last_name: string;
 
     @Column({ unique: true })
     email: string;
@@ -23,9 +17,9 @@ export class User {
         enum: UserRole,
         default: UserRole.USER,
     })
-    roles: UserRole;
+    role: UserRole;
 
-    @Column()
+    @Column({ default: false })
     emailVerified: boolean;
 
     @CreateDateColumn({ default: new Date() })

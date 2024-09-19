@@ -9,15 +9,12 @@ import { Otp } from './entity/Otp';
 import { LoggerService } from './logger/logger';
 import { JwtStrategy } from './utils/jwt/jwtStrategy';
 import { AuthService } from './services/authService';
-import { AuthController } from './controllers/authController';
+import { AuthController } from './auth/auth.controller';
 import { BullQueueModule } from './bullmq.module';
+import { ClientKafka } from '@nestjs/microservices';
 
 @Module({
     imports: [
-        BullQueueModule,
-        ConfigModule.forRoot(),
-        TypeOrmModule.forFeature([User, Otp]),
-        PassportModule,
         JwtModule.registerAsync({
             imports: [ConfigModule],
             inject: [ConfigService],
@@ -28,7 +25,6 @@ import { BullQueueModule } from './bullmq.module';
                 },
             }),
         }),
-        HttpModule,
     ],
     controllers: [AuthController],
     providers: [AuthService, LoggerService, JwtStrategy],

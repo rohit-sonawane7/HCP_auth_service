@@ -1,24 +1,19 @@
 import 'dotenv/config';
-import bcrypt from 'bcryptjs';
-import { JwtPayload } from 'jsonwebtoken';
-import { Repository } from 'typeorm';
-import {
-    Injectable,
-    UnauthorizedException,
-    InternalServerErrorException,
-    HttpException,
-} from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
+import { Injectable, UnauthorizedException, InternalServerErrorException, HttpException } from '@nestjs/common';
+import { Repository } from 'typeorm';
+import { JwtPayload } from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import { User } from '../entity/User';
-import { Otp } from '../entity/Otp';
+import { NotificationStatus, NotificationType, Otp } from '../entity/Otp';
 import { RegisterDto, LoginDto } from '../dto/auth.dto';
-import { EmailResponse, UserRole, UserToken } from '../types/user';
+import { UserRole, UserToken } from '../types/user';
 import { LoggerService } from '../logger/logger';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { ValidateOtpDto } from '../dto/validate_otp.dto';
 import { BullQueueService } from './bullmq.service';
+// import { KafkaProducer } from '../kafka/kafka.producer';
 
 @Injectable()
 export class AuthService {
@@ -29,34 +24,27 @@ export class AuthService {
         private readonly otpRepository: Repository<Otp>,
         private readonly logger: LoggerService,
         private readonly jwtService: JwtService,
-        private readonly httpService: HttpService,
-        private readonly bullQueueService: BullQueueService
+        private readonly bullQueueService: BullQueueService,
+        // private readonly kafkaProducer: KafkaProducer,
     ) { }
 
-    async register(registerDto: RegisterDto): Promise<{ message: string }> {
+    async registerPatient(registerDto: RegisterDto): Promise<{ message: string }> {
         try {
-            const { first_name, last_name, email, password } = registerDto;
-            const existingUser = await this.userRepository.findOneBy({ email });
-            if (existingUser) {
-                throw new HttpException('User already exists', 400);
-            }
-            const newUser = new User();
-            newUser.first_name = first_name;
-            newUser.last_name = last_name;
-            newUser.email = email;
-            newUser.password = await bcrypt.hash(password, 10);
-            newUser.roles = UserRole.USER;
-            newUser.createdAt = new Date();
-            await this.userRepository.save(newUser);
-            const mailResponse = await this.sendNotification(email);
+            const { email, password } = registerDto;
+            // const newUser = new User();
+            // newUser.email = email;
+            // newUser.password = await bcrypt.hash(password, 10);
+            // newUser.role = UserRole.USER;
+            // newUser.emailVerified = false;
+            // newUser.createdAt = new Date();
+            // await this.userRepository.save(newUser);
             const newOtp = new Otp();
-            newOtp.email = email;
-            newOtp.otp = mailResponse.otp;
-            await this.otpRepository.save(newOtp);
-            await this.bullQueueService.addTask(
-                {
-                    email,
-                }, 60000);
+            // newOtp.email = email;
+            // newOtp.type = NotificationType.EMAIL;
+            // newOtp.status = NotificationStatus.PENDING;
+            newOtp.otp = this.generateOtp();
+            // await this.otpRepository.save(newOtp);
+            // this.kafkaProducer.sendOtp(email, newOtp.otp);
             return { message: "user register successfully" };
         }
         catch (error) {
@@ -68,7 +56,7 @@ export class AuthService {
         }
     }
 
-    async login(loginDto: LoginDto): Promise<{ id: number, name: string, token: UserToken }> {
+    async login(loginDto: LoginDto): Promise<{ id: number, token: UserToken }> {
         try {
             const { email, password } = loginDto;
             const user = await this.userRepository.findOneBy({ email });
@@ -80,12 +68,14 @@ export class AuthService {
             if (!isMatch) {
                 throw new UnauthorizedException('Invalid credentials');
             }
+            if (!user.emailVerified) {
+                throw new UnauthorizedException('User email is not verified');
+            }
             const token = await this.generateJwtToken(String(user.id), true);
 
             const response = {
                 id: user.id,
                 token,
-                name: `${user.first_name} ${user.last_name}`
             }
 
             return response;
@@ -166,14 +156,6 @@ export class AuthService {
         }
     }
 
-    async sendNotification(email: string): Promise<EmailResponse> {
-        try {
-            return this.httpService.post(`${process.env.NOTIFICATION_URL}/email/send-otp`, { email }).toPromise() as unknown as EmailResponse;
-        } catch (error) {
-            throw new Error('Failed to send notification');
-        }
-    }
-
     async verifyOtp(validateOtpDto: ValidateOtpDto): Promise<boolean> {
         try {
             const { email, otp } = validateOtpDto;
@@ -189,6 +171,21 @@ export class AuthService {
             } else return false;
         } catch (error) {
             throw new Error('Failed to validate otp');
+        }
+    }
+
+    private generateOtp(): number {
+        return Number(Math.floor(100000 + Math.random() * 900000).toString());
+    }
+
+    async handleOtpSent(email: string) {
+        await this.bullQueueService.addTask('deleteUnverifiedUser', { email }, 10 * 60 * 1000);
+    }
+
+    async deleteUnverifiedUser(email: string) {
+        const user = await this.userRepository.findOne({ where: { email } });
+        if (user && !user.emailVerified) {
+            await this.userRepository.remove(user);
         }
     }
 }

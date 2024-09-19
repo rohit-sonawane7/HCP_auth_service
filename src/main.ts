@@ -8,8 +8,8 @@ async function bootstrap() {
     app.setGlobalPrefix('api');
     app.enableCors();
     app.useGlobalFilters(new HttpExceptionFilter());
-    await app.listen(5000);
-    Logger.log('Application is running on: http://localhost:5000', 'Bootstrap');
+    await app.listen(3000);
+    Logger.log('Application is running on: http://localhost:3000', 'Bootstrap');
 }
 
 bootstrap();

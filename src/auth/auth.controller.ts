@@ -1,5 +1,5 @@
 import { Post, Body, Controller, ValidationPipe, UseFilters, HttpCode } from '@nestjs/common';
-import { AuthService } from '../services/authService';
+import { AuthService } from './authService';
 import { RegisterDto, LoginDto } from '../dto/auth.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { HttpExceptionFilter } from '../middlewares/errorHandler';
@@ -14,11 +14,19 @@ export class AuthController {
   ) { }
 
   @HttpCode(201)
-  @Post('register')
-  async register(
+  @Post('signup-patient')
+  async signUpPatient(
     @Body(new ValidationPipe()) registerDto: RegisterDto,
   ): Promise<{ message: string }> {
-    return this.authService.register(registerDto);
+    return this.authService.registerPatient(registerDto);
+  }
+
+  @HttpCode(201)
+  @Post('signup-provider')
+  async signUpProvider(
+    @Body(new ValidationPipe()) registerDto: RegisterDto,
+  ): Promise<{ message: string }> {
+    return this.authService.registerPatient(registerDto);
   }
 
   @HttpCode(200)
